@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orçamento em Voo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --slate-950:#020617; --slate-900:#0f172a; --slate-800:#1e293b; --slate-700:#334155;
+    --slate-600:#475569; --slate-500:#64748b; --slate-400:#94a3b8; --slate-300:#cbd5e1;
+    --slate-200:#e2e8f0; --slate-100:#f1f5f9; --slate-50:#f8fafc;
+    --amber-400:#fbbf24; --amber-300:#fcd34d; --sky-400:#38bdf8;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--slate-950); font-family:'Inter',-apple-system,sans-serif; color:var(--slate-100); padding:2rem 1rem; }
+  .wrap { max-width:28rem; margin:0 auto; }
+  .hidden { display:none !important; }
+
+  .brandmark { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.25em; color:var(--slate-600); }
+
+  .hero { position:relative; overflow:hidden; margin-top:.75rem; border:1px solid var(--slate-700); background:var(--slate-900); border-radius:1rem; padding:2.25rem 1.5rem; }
+  .hero-grid { position:absolute; inset:0; opacity:.06; pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.6) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.6) 1px,transparent 1px);
+    background-size:26px 26px; }
+  .corner { position:absolute; width:20px; height:20px; border-color:rgba(251,191,36,.7); }
+  .corner.tl{top:12px;left:12px;border-top:2px solid;border-left:2px solid;}
+  .corner.tr{top:12px;right:12px;border-top:2px solid;border-right:2px solid;}
+  .corner.bl{bottom:12px;left:12px;border-bottom:2px solid;border-left:2px solid;}
+  .corner.br{bottom:12px;right:12px;border-bottom:2px solid;border-right:2px solid;}
+  .hud-row { position:relative; display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--sky-400); }
+  .hide-sm { display:none; }
+  @media (min-width:640px){ .hide-sm{ display:inline; } }
+  .brand-chip { position:relative; margin-top:1.5rem; display:flex; align-items:center; gap:.5rem; color:var(--amber-400); font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.2em; }
+  h1 { position:relative; margin:.75rem 0 0; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.875rem; color:var(--slate-50); }
+  .sub { position:relative; margin:.5rem 0 0; max-width:20rem; font-size:.875rem; color:var(--slate-400); }
+
+  .step { margin-top:2rem; }
+  .step-label { display:flex; align-items:center; gap:.75rem; font-family:'JetBrains Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:.15em; color:var(--sky-400); }
+  .rule { height:1px; flex:1; background:var(--slate-800); }
+
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:1rem; }
+  .stack { display:flex; flex-direction:column; gap:.5rem; margin-top:1rem; }
+
+  .opt-btn { display:flex; flex-direction:column; align-items:center; gap:.5rem; border:1px solid var(--slate-700); background:var(--slate-900); color:var(--slate-300);
+    border-radius:.75rem; padding:1rem .5rem; font-family:'Inter',sans-serif; font-size:.875rem; cursor:pointer; transition:border-color .15s,background .15s,color .15s; width:100%; }
+  .opt-btn:hover { border-color:var(--slate-500); }
+  .opt-btn.active { border-color:var(--amber-400); background:rgba(251,191,36,.1); color:var(--amber-300); }
+  .opt-btn .emoji { font-size:1.25rem; }
+
+  .opt-row { display:flex; flex-direction:column; align-items:flex-start; text-align:left; border:1px solid var(--slate-700); background:var(--slate-900);
+    border-radius:.75rem; padding:.75rem 1rem; font-family:'Inter',sans-serif; font-size:.875rem; color:var(--slate-200); cursor:pointer; width:100%; transition:border-color .15s,background .15s; }
+  .opt-row:hover { border-color:var(--slate-500); }
+  .opt-row.active { border-color:var(--amber-400); background:rgba(251,191,36,.1); }
+  .opt-row.active .opt-row-label { color:var(--amber-300); }
+  .hint-text { font-size:.75rem; color:var(--slate-500); margin-top:.125rem; }
+
+  .input { width:100%; border:1px solid var(--slate-700); background:var(--slate-950); color:var(--slate-100); border-radius:.5rem; padding:.5rem .75rem; font-family:'Inter',sans-serif; font-size:.875rem; margin-top:1rem; }
+  .input:focus { outline:none; border-color:var(--amber-400); }
+  .input::placeholder { color:var(--slate-600); }
+
+  .result-card { margin-top:2rem; border:1px solid rgba(251,191,36,.4); background:var(--slate-900); border-radius:1rem; padding:1.5rem; text-align:center; }
+  .tag { font-family:'JetBrains Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:.15em; color:var(--sky-400); }
+  .strike { margin-top:.5rem; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--slate-500); text-decoration:line-through; }
+  .preco { margin-top:.25rem; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.875rem; color:var(--amber-300); }
+  .badge { margin-top:.25rem; display:inline-block; border-radius:999px; background:rgba(251,191,36,.1); padding:.25rem .75rem; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--amber-300); }
+  .hint { margin:.5rem auto 0; max-width:20rem; font-size:.75rem; color:var(--slate-500); }
+  .hint.small { font-size:10px; color:var(--slate-600); margin-top:.25rem; }
+  .hint.left { text-align:left; margin:0; max-width:none; }
+
+  .form-stack { margin-top:1.25rem; display:flex; flex-direction:column; gap:.5rem; text-align:left; }
+  .form-stack .input { margin-top:0; }
+
+  .cta { margin-top:1rem; display:inline-flex; align-items:center; gap:.5rem; border-radius:999px; padding:.75rem 1.5rem; font-family:'Inter',sans-serif; font-weight:600; font-size:.875rem;
+    background:var(--amber-400); color:var(--slate-950); text-decoration:none; cursor:pointer; border:none; transition:background .15s; }
+  .cta:hover { background:var(--amber-300); }
+  .cta.disabled { background:var(--slate-800); color:var(--slate-500); cursor:not-allowed; pointer-events:none; }
+
+  .linklike { margin-top:.75rem; display:block; width:100%; background:none; border:none; font-family:'Inter',sans-serif; font-size:.75rem; color:var(--slate-500); text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+  .linklike:hover { color:var(--slate-300); }
+
+  .admin-zone { margin-top:2.5rem; border-top:1px solid var(--slate-900); padding-top:1rem; }
+  .admin-toggle { display:block; width:100%; background:none; border:none; text-align:center; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--slate-700); cursor:pointer; }
+  .admin-toggle:hover { color:var(--slate-500); }
+  .admin-card { border:1px solid var(--slate-800); background:var(--slate-900); border-radius:.75rem; padding:1rem; }
+  .admin-card-head { display:flex; align-items:center; justify-content:space-between; }
+  .admin-label { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--slate-500); }
+  .icon-btn { background:none; border:none; cursor:pointer; color:var(--slate-600); font-size:1rem; line-height:1; }
+  .section-gap { margin-top:1.25rem; }
+  .desc-row { display:flex; gap:.5rem; margin-top:.5rem; }
+  .desc-row .input { margin-top:0; }
+  .btn-save { flex-shrink:0; border-radius:.5rem; background:var(--amber-400); color:var(--slate-950); border:none; padding:.5rem 1rem; font-family:'Inter',sans-serif; font-size:.75rem; font-weight:600; cursor:pointer; }
+  .btn-save:hover { background:var(--amber-300); }
+  .btn-save.full { width:100%; margin-top:.5rem; }
+  .leads-head { display:flex; align-items:center; justify-content:space-between; margin-top:1.25rem; }
+  .leads-count-label { font-size:.75rem; color:var(--slate-400); }
+  .btn-refresh { background:none; border:none; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; color:var(--sky-400); cursor:pointer; }
+  .leads-list { margin-top:.5rem; max-height:12rem; overflow-y:auto; display:flex; flex-direction:column; gap:.5rem; }
+  .lead-item { border:1px solid var(--slate-800); background:var(--slate-950); border-radius:.5rem; padding:.5rem; font-size:.75rem; }
+  .lead-item .n { font-weight:600; color:var(--slate-100); }
+  .lead-item .m { color:var(--slate-500); }
+  .lead-item .p { color:var(--amber-400); }
+  .btn-copy { width:100%; border-radius:.5rem; background:var(--slate-800); color:var(--slate-300); border:none; padding:.5rem .75rem; font-family:'Inter',sans-serif; font-size:.75rem; cursor:pointer; margin-top:.75rem; }
+  .btn-copy:hover { background:var(--slate-700); }
+  textarea.input { font-family:'JetBrains Mono',monospace; font-size:10px; resize:vertical; }
+
+  .footer { margin-top:1.5rem; text-align:center; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--slate-600); }
+
+  .opt-btn:focus-visible, .opt-row:focus-visible, .cta:focus-visible, .input:focus-visible,
+  .linklike:focus-visible, .icon-btn:focus-visible, .admin-toggle:focus-visible,
+  .btn-save:focus-visible, .btn-refresh:focus-visible, .btn-copy:focus-visible {
+    outline:2px solid var(--amber-400); outline-offset:2px;
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration:.01ms !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brandmark">[seu nome] · vídeos aéreos</div>
+
+  <div class="hero">
+    <div class="hero-grid"></div>
+    <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="hud-row"><span>alt 120m</span><span class="hide-sm">gps locked</span><span>bat 94%</span></div>
+    <div class="brand-chip">✈️ orçamento em voo</div>
+    <h1>Quanto custa o seu voo?</h1>
+    <p class="sub">Escolha o serviço, o local e os detalhes — a faixa de valor aparece na hora, sem compromisso.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span>serviço</span><span class="rule"></span></div>
+    <div class="grid-2" id="tipos"></div>
+  </div>
+
+  <div class="step hidden" id="step-opcao">
+    <div class="step-label"><span>porte do projeto</span><span class="rule"></span></div>
+    <div class="stack" id="opcoes"></div>
+  </div>
+
+  <div class="step hidden" id="step-cidade">
+    <div class="step-label"><span>cidade do serviço</span><span class="rule"></span></div>
+    <select id="cidade-select" class="input"><option value="">Selecione a cidade</option></select>
+  </div>
+
+  <div class="step hidden" id="step-dia">
+    <div class="step-label"><span>dia do evento</span><span class="rule"></span></div>
+    <div class="grid-2" id="dias"></div>
+  </div>
+
+  <div class="step hidden" id="step-duracao">
+    <div class="step-label"><span>tempo médio</span><span class="rule"></span></div>
+    <div class="stack" id="duracoes"></div>
+  </div>
+
+  <div class="step hidden" id="step-entrega">
+    <div class="step-label"><span>entrega</span><span class="rule"></span></div>
+    <div class="grid-2" id="entregas"></div>
+  </div>
+
+  <div class="result-card hidden" id="resultado">
+    <div class="tag">estimativa</div>
+    <div class="strike hidden" id="valor-original"></div>
+    <div class="preco" id="valor-final"></div>
+    <div class="badge hidden" id="desconto-badge"></div>
+    <p class="hint hidden" id="deslocamento-nota"></p>
+    <p class="hint">Valor estimado. Pode variar conforme detalhes do projeto — confirme com a gente no WhatsApp.</p>
+
+    <div class="form-stack">
+      <input id="nome" class="input" placeholder="Seu nome">
+      <input id="telefone" class="input" type="tel" placeholder="WhatsApp (com DDD)">
+      <input id="email" class="input" type="email" placeholder="E-mail (opcional)">
+    </div>
+
+    <a id="cta-whats" class="cta disabled" target="_blank" rel="noopener noreferrer">💬 Confirmar no WhatsApp</a>
+    <p class="hint small" id="cta-aviso">Preencha nome e WhatsApp pra continuar.</p>
+    <button class="linklike" id="btn-reset">Simular outro serviço</button>
+  </div>
+
+  <div class="admin-zone">
+    <button class="admin-toggle" id="btn-admin-abrir">painel administrativo</button>
+
+    <div class="admin-card hidden" id="admin-pin-card">
+      <div class="admin-card-head">
+        <span class="admin-label">acesso restrito</span>
+        <button class="icon-btn" id="btn-admin-pin-fechar" aria-label="Fechar">✕</button>
+      </div>
+      <input type="password" id="pin-input" class="input" placeholder="PIN">
+      <button class="btn-save full" id="btn-admin-entrar">Entrar</button>
+    </div>
+
+    <div class="admin-card hidden" id="admin-panel">
+      <div class="admin-card-head">
+        <span class="admin-label">painel administrativo</span>
+        <button class="icon-btn" id="btn-admin-fechar" aria-label="Fechar">✕</button>
+      </div>
+
+      <p class="hint left hidden" id="storage-aviso" style="color:#f87171;margin-top:1rem;">⚠️ Esse navegador não tem acesso ao armazenamento do Claude — desconto e leads não vão salvar aqui. Só funciona vendo a ferramenta dentro do Claude (nesta conversa ou por um link Publicado).</p>
+
+      <div class="section-gap">
+        <p class="hint left">Desconto aplicado a todo mundo que usar a ferramenta:</p>
+        <div class="desc-row">
+          <input type="number" min="0" max="100" id="desconto-input" class="input">
+          <button class="btn-save" id="btn-salvar-desconto">Salvar</button>
+        </div>
+        <p class="hint small" id="desconto-atual">Desconto ativo agora: 0%</p>
+        <p class="hint small hidden" id="desconto-status"></p>
+      </div>
+
+      <div class="section-gap">
+        <div class="leads-head">
+          <span class="leads-count-label" id="leads-count">Leads recebidos (0)</span>
+          <button class="btn-refresh" id="btn-atualizar-leads">atualizar</button>
+        </div>
+        <div class="leads-list" id="leads-list"><p class="hint left">Nenhum lead ainda.</p></div>
+
+        <div class="hidden" id="leads-export">
+          <button class="btn-copy" id="btn-copiar-leads">Copiar leads (cole direto no Sheets)</button>
+          <textarea readonly id="tsv-area" class="input" rows="4"></textarea>
+          <p class="hint small">Se o botão não copiar sozinho, toque no texto acima pra selecionar tudo e copie manualmente.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="footer">[seu nome] · piloto registrado</p>
+</div>
+
+<script>
+// ── CONFIGURAÇÕES — troque pelos seus dados ────────────────────────────────
+const WHATSAPP_NUMBER = '5511999999999'; // DDI 55 + DDD + número, só dígitos
+const ADMIN_PIN = '2026'; // troque por um PIN seu
+const DESCONTO_PADRAO = 0; // também editável pelo painel administrativo
+const SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwOM8fNm9AaLSXs7n-PYmjSq9a3XgWfMYOb-Ai65wZbUEvcxT67mpwV6XbHRQlXJnAW/exec'; // cole aqui a URL do seu Google Apps Script (veja instruções) — deixe vazio pra não usar
+
+const CIDADE_BASE = 'Guarujá'; // cidade a partir da qual o km é 0
+const CIDADES_KM = {
+  'Guarujá': 0, 'Bertioga': 35, 'Santos': 25, 'São Vicente': 30,
+  'Cubatão': 35, 'Praia Grande': 40, 'Mongaguá': 55, 'Itanhaém': 70, 'Peruíbe': 85,
+}; // km estimados (considerando balsa/rodovia) — confira e ajuste
+const KM_RATE_PADRAO = 1.0; // R$/km fora do fluxo de evento
+
+const DIA_EVENTO_OPCOES = [
+  { id:'semana', label:'Dia de semana', kmRate:0.7 },
+  { id:'fimDeSemana', label:'Fim de semana', kmRate:1.3 },
+];
+const DURACAO_OPCOES = [
+  { id:'ate1h', label:'Até 1h de cobertura', delta:0 },
+  { id:'2a4h', label:'2 a 4h de cobertura', delta:300 },
+  { id:'diaInteiro', label:'Dia inteiro', delta:800 },
+];
+const ENTREGA_OPCOES = [
+  { id:'bruto', label:'Apenas imagens brutas', mult:0.7 },
+  { id:'editado', label:'Com edição básica', mult:1.0 },
+];
+const SERVICE_TYPES = [
+  { id:'imovel', label:'Imóvel', emoji:'🏠', hasCidade:true, hasEntrega:true, options:[
+      { id:'padrao', label:'Residencial padrão', hint:'casa ou apto até médio porte', range:[700,1100] },
+      { id:'alto', label:'Alto padrão / cobertura', hint:'imóveis maiores ou de luxo', range:[1500,2200] },
+      { id:'empreendimento', label:'Empreendimento completo', hint:'condomínio, loteamento', range:[2500,4200] },
+  ]},
+  { id:'obra', label:'Obra', emoji:'🏗️', hasCidade:true, options:[
+      { id:'pontual', label:'Visita única', hint:'um registro pontual da obra', range:[1900,2700] },
+      { id:'mensal', label:'Acompanhamento mensal', hint:'contrato recorrente', range:[4000,6000], suffix:'/mês' },
+  ]},
+  { id:'evento', label:'Evento', emoji:'🎉', hasCidade:true, hasDiaEvento:true, hasDuracao:true, hasEntrega:true, options:[
+      { id:'simples', label:'Simples, ao ar livre', hint:'cerimônia curta, edição básica', range:[800,1300] },
+      { id:'completo', label:'Completo', hint:'cerimônia + festa, vídeo editado', range:[2000,3000] },
+  ]},
+  { id:'redes', label:'Redes sociais', emoji:'📱', hasCidade:true, options:[
+      { id:'fotos', label:'Fotos para redes sociais', hint:'pacote de fotos editadas', range:[350,550] },
+      { id:'video', label:'Vídeo curto (até 1 min)', hint:'pronto pra Reels/Stories', range:[550,850] },
+  ]},
+];
+
+const state = { typeId:null, optionId:null, cidade:'', diaEventoId:null, duracaoId:null, entregaId:null,
+  nome:'', telefone:'', email:'', descontoPercent:DESCONTO_PADRAO, leads:[] };
+
+function money(n){ return Math.round(n).toLocaleString('pt-BR'); }
+function storageDisponivel(){ return typeof window.storage !== 'undefined' && window.storage && typeof window.storage.set === 'function'; }
+function el(tag, props, ...children){
+  const e = document.createElement(tag);
+  Object.entries(props||{}).forEach(([k,v])=>{
+    if (k==='class') e.className=v;
+    else if (k.startsWith('on') && typeof v==='function') e.addEventListener(k.slice(2).toLowerCase(), v);
+    else e.setAttribute(k, v);
+  });
+  children.flat().forEach(c=>{ if(c==null) return; e.appendChild(typeof c==='string'?document.createTextNode(c):c); });
+  return e;
+}
+function getTipo(){ return SERVICE_TYPES.find(t=>t.id===state.typeId) || null; }
+function getOpcao(){ const t=getTipo(); return t ? t.options.find(o=>o.id===state.optionId) : null; }
+function isCompleto(){
+  const t=getTipo(), o=getOpcao();
+  if(!t||!o) return false;
+  if(t.hasCidade && !state.cidade) return false;
+  if(t.hasDiaEvento && !state.diaEventoId) return false;
+  if(t.hasDuracao && !state.duracaoId) return false;
+  if(t.hasEntrega && !state.entregaId) return false;
+  return true;
+}
+function calcular(){
+  const t=getTipo(), o=getOpcao();
+  let [min,max] = o.range;
+  if(t.hasEntrega){ const e=ENTREGA_OPCOES.find(x=>x.id===state.entregaId); if(e){ min*=e.mult; max*=e.mult; } }
+  if(t.hasDuracao){ const d=DURACAO_OPCOES.find(x=>x.id===state.duracaoId); if(d){ min+=d.delta; max+=d.delta; } }
+  let deslocamento=0;
+  if(t.hasCidade && state.cidade){
+    const km = CIDADES_KM[state.cidade] ?? 0;
+    let rate = KM_RATE_PADRAO;
+    if(t.hasDiaEvento){ const d=DIA_EVENTO_OPCOES.find(x=>x.id===state.diaEventoId); if(d) rate=d.kmRate; }
+    deslocamento = km*rate;
+  }
+  min+=deslocamento; max+=deslocamento;
+  const fator = 1 - state.descontoPercent/100;
+  return { min, max, minComDesconto:min*fator, maxComDesconto:max*fator, deslocamento, desconto:state.descontoPercent, suffix:o.suffix||'' };
+}
+function podeEnviar(){ return isCompleto() && state.nome.trim() && state.telefone.trim(); }
+
+function buildTipos(){
+  const c = document.getElementById('tipos'); c.innerHTML='';
+  SERVICE_TYPES.forEach(t=>{
+    c.appendChild(el('button', { class:'opt-btn'+(state.typeId===t.id?' active':''), onClick:()=>selecionarTipo(t.id) },
+      el('span',{class:'emoji'}, t.emoji), t.label));
+  });
+}
+function selecionarTipo(id){
+  state.typeId=id; state.optionId=null; state.cidade='';
+  state.diaEventoId=null; state.duracaoId=null; state.entregaId=null;
+  render();
+}
+function buildOpcoes(){
+  const t=getTipo(); const wrap=document.getElementById('step-opcao'); const c=document.getElementById('opcoes');
+  if(!t){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden'); c.innerHTML='';
+  t.options.forEach(o=>{
+    c.appendChild(el('button', { class:'opt-row'+(state.optionId===o.id?' active':''), onClick:()=>{ state.optionId=o.id; render(); } },
+      el('span',{class:'opt-row-label'}, o.label), el('span',{class:'hint-text'}, o.hint)));
+  });
+}
+function buildCidade(){
+  const t=getTipo(); const wrap=document.getElementById('step-cidade'); const sel=document.getElementById('cidade-select');
+  if(!t || !t.hasCidade || !state.optionId){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  if(sel.dataset.built!=='1'){
+    Object.keys(CIDADES_KM).forEach(cid=>{
+      const opt=document.createElement('option'); opt.value=cid;
+      opt.textContent = cid + (CIDADES_KM[cid]===0 ? ` (base — ${CIDADE_BASE})` : ` (+${CIDADES_KM[cid]} km)`);
+      sel.appendChild(opt);
+    });
+    sel.dataset.built='1';
+    sel.addEventListener('change', ()=>{ state.cidade=sel.value; render(); });
+  }
+  sel.value = state.cidade;
+}
+function buildDia(){
+  const t=getTipo(); const wrap=document.getElementById('step-dia'); const c=document.getElementById('dias');
+  if(!t || !t.hasDiaEvento || !state.cidade){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden'); c.innerHTML='';
+  DIA_EVENTO_OPCOES.forEach(d=>{
+    c.appendChild(el('button', { class:'opt-btn'+(state.diaEventoId===d.id?' active':''), onClick:()=>{ state.diaEventoId=d.id; render(); } }, d.label));
+  });
+}
+function buildDuracao(){
+  const t=getTipo(); const wrap=document.getElementById('step-duracao'); const c=document.getElementById('duracoes');
+  const gate = !t || !t.hasDiaEvento || state.diaEventoId;
+  if(!t || !t.hasDuracao || !gate){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden'); c.innerHTML='';
+  DURACAO_OPCOES.forEach(d=>{
+    c.appendChild(el('button', { class:'opt-row'+(state.duracaoId===d.id?' active':''), onClick:()=>{ state.duracaoId=d.id; render(); } },
+      el('span',{class:'opt-row-label'}, d.label)));
+  });
+}
+function buildEntrega(){
+  const t=getTipo(); const wrap=document.getElementById('step-entrega'); const c=document.getElementById('entregas');
+  const gate = (!t || !t.hasDuracao || state.duracaoId) && (!t || !t.hasDiaEvento || state.diaEventoId);
+  if(!t || !t.hasEntrega || !gate){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden'); c.innerHTML='';
+  ENTREGA_OPCOES.forEach(en=>{
+    c.appendChild(el('button', { class:'opt-btn'+(state.entregaId===en.id?' active':''), onClick:()=>{ state.entregaId=en.id; render(); } }, en.label));
+  });
+}
+function buildResultado(){
+  const card=document.getElementById('resultado');
+  if(!isCompleto()){ card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  const r = calcular();
+  const original=document.getElementById('valor-original');
+  if(r.desconto>0){ original.classList.remove('hidden'); original.textContent = `R$ ${money(r.min)}–${money(r.max)}`; }
+  else original.classList.add('hidden');
+  document.getElementById('valor-final').textContent = `R$ ${money(r.minComDesconto)}–${money(r.maxComDesconto)}${r.suffix}`;
+  const badge=document.getElementById('desconto-badge');
+  if(r.desconto>0){ badge.classList.remove('hidden'); badge.textContent = `${r.desconto}% off`; } else badge.classList.add('hidden');
+  const desl=document.getElementById('deslocamento-nota');
+  if(r.deslocamento>0){ desl.classList.remove('hidden'); desl.textContent = `Já inclui deslocamento até ${state.cidade}.`; } else desl.classList.add('hidden');
+  atualizarCTA();
+}
+function atualizarCTA(){
+  const cta=document.getElementById('cta-whats'); const aviso=document.getElementById('cta-aviso');
+  if(podeEnviar()){
+    cta.classList.remove('disabled');
+    const r=calcular(); const t=getTipo(); const o=getOpcao();
+    const msg = `Oi! Simulei um orçamento no seu site: ${t.label} — ${o.label}${state.cidade?` em ${state.cidade}`:''}. Faixa estimada: R$ ${money(r.minComDesconto)}–${money(r.maxComDesconto)}${r.suffix}. Meu nome é ${state.nome}. Queria confirmar os detalhes!`;
+    cta.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+    aviso.classList.add('hidden');
+  } else {
+    cta.classList.add('disabled'); cta.removeAttribute('href'); aviso.classList.remove('hidden');
+  }
+}
+function render(){ buildTipos(); buildOpcoes(); buildCidade(); buildDia(); buildDuracao(); buildEntrega(); buildResultado(); }
+
+document.getElementById('nome').addEventListener('input', e=>{ state.nome=e.target.value; atualizarCTA(); });
+document.getElementById('telefone').addEventListener('input', e=>{ state.telefone=e.target.value; atualizarCTA(); });
+document.getElementById('email').addEventListener('input', e=>{ state.email=e.target.value; });
+
+async function salvarLead(){
+  const r=calcular(); const t=getTipo(); const o=getOpcao();
+  const registro = { nome:state.nome, telefone:state.telefone, email:state.email, tipo:t.label, opcao:o.label,
+    cidade: state.cidade||'—', estimativa:`R$ ${money(r.minComDesconto)}–${money(r.maxComDesconto)}${r.suffix}`,
+    data:new Date().toLocaleString('pt-BR') };
+
+  if (SHEETS_WEBHOOK_URL) {
+    try {
+      await fetch(SHEETS_WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(registro),
+      });
+    } catch(err){ console.error('Erro ao enviar pra planilha (normal se estiver vendo dentro do Claude):', err); }
+  }
+
+  if (storageDisponivel()) {
+    const id = `lead:${Date.now()}`;
+    try { await window.storage.set(id, JSON.stringify(registro), true); }
+    catch(err){ console.error('Erro ao salvar lead:', err); }
+  }
+}
+document.getElementById('cta-whats').addEventListener('click', async (e)=>{
+  if(!podeEnviar()){ e.preventDefault(); return; }
+  await salvarLead();
+});
+document.getElementById('btn-reset').addEventListener('click', ()=>{
+  state.typeId=null; state.optionId=null; state.cidade=''; state.diaEventoId=null; state.duracaoId=null; state.entregaId=null;
+  state.nome=''; state.telefone=''; state.email='';
+  document.getElementById('nome').value=''; document.getElementById('telefone').value=''; document.getElementById('email').value='';
+  render();
+});
+
+// Admin
+document.getElementById('btn-admin-abrir').addEventListener('click', ()=>{
+  document.getElementById('btn-admin-abrir').classList.add('hidden');
+  document.getElementById('admin-pin-card').classList.remove('hidden');
+});
+document.getElementById('btn-admin-pin-fechar').addEventListener('click', ()=>{
+  document.getElementById('admin-pin-card').classList.add('hidden');
+  document.getElementById('btn-admin-abrir').classList.remove('hidden');
+  document.getElementById('pin-input').value='';
+});
+async function entrarAdmin(){
+  const val = document.getElementById('pin-input').value;
+  if(val===ADMIN_PIN){
+    document.getElementById('admin-pin-card').classList.add('hidden');
+    document.getElementById('admin-panel').classList.remove('hidden');
+    document.getElementById('storage-aviso').classList.toggle('hidden', storageDisponivel());
+    document.getElementById('desconto-input').value = String(state.descontoPercent);
+    document.getElementById('desconto-atual').textContent = `Desconto ativo agora: ${state.descontoPercent}%`;
+    await carregarLeads();
+  } else {
+    document.getElementById('pin-input').value='';
+  }
+}
+document.getElementById('btn-admin-entrar').addEventListener('click', entrarAdmin);
+document.getElementById('pin-input').addEventListener('keydown', e=>{ if(e.key==='Enter') entrarAdmin(); });
+document.getElementById('btn-admin-fechar').addEventListener('click', ()=>{
+  document.getElementById('admin-panel').classList.add('hidden');
+  document.getElementById('btn-admin-abrir').classList.remove('hidden');
+});
+document.getElementById('btn-salvar-desconto').addEventListener('click', async ()=>{
+  const val = Math.max(0, Math.min(100, Number(document.getElementById('desconto-input').value)||0));
+  const status = document.getElementById('desconto-status');
+  status.classList.remove('hidden');
+  if(!storageDisponivel()){
+    status.textContent = 'Não salvou — veja o aviso acima.';
+    return;
+  }
+  try {
+    await window.storage.set('config:desconto', String(val), true);
+    state.descontoPercent = val;
+    document.getElementById('desconto-atual').textContent = `Desconto ativo agora: ${val}%`;
+    status.textContent = 'Salvo!';
+    setTimeout(()=>status.classList.add('hidden'), 2500);
+    render();
+  } catch(err){
+    console.error('Erro ao salvar desconto:', err);
+    status.textContent = 'Erro ao salvar: ' + (err && err.message ? err.message : 'tente de novo');
+  }
+});
+function atualizarTSV(){
+  const linhas = [
+    ['Nome','Telefone','Email','Tipo','Opção','Cidade','Estimativa','Data'].join('\t'),
+    ...state.leads.map(l=>[l.nome,l.telefone,l.email,l.tipo,l.opcao,l.cidade,l.estimativa,l.data].join('\t')),
+  ].join('\n');
+  document.getElementById('tsv-area').value = linhas;
+}
+async function carregarLeads(){
+  const listEl = document.getElementById('leads-list');
+  if(!storageDisponivel()){
+    listEl.innerHTML = '<p class="hint left">Sem acesso ao armazenamento aqui — veja o aviso acima.</p>';
+    document.getElementById('leads-count').textContent = 'Leads recebidos (—)';
+    return;
+  }
+  listEl.innerHTML = '<p class="hint left">Carregando…</p>';
+  try {
+    const listagem = await window.storage.list('lead:', true);
+    const chaves = (listagem && listagem.keys) || [];
+    const registros = [];
+    for(const chave of chaves){
+      try { const r = await window.storage.get(chave, true); if(r && r.value) registros.push(JSON.parse(r.value)); }
+      catch(e){ /* ignora registro com problema */ }
+    }
+    registros.sort((a,b)=> a.data<b.data ? 1 : -1);
+    state.leads = registros;
+    document.getElementById('leads-count').textContent = `Leads recebidos (${registros.length})`;
+    listEl.innerHTML='';
+    if(registros.length===0){ listEl.innerHTML = '<p class="hint left">Nenhum lead ainda.</p>'; }
+    else {
+      registros.forEach(l=>{
+        listEl.appendChild(el('div',{class:'lead-item'},
+          el('div',{class:'n'}, l.nome),
+          el('div',{class:'m'}, l.telefone + (l.email?` · ${l.email}`:'')),
+          el('div',{class:'m'}, `${l.tipo} — ${l.opcao} — ${l.cidade}`),
+          el('div',{class:'p'}, l.estimativa)
+        ));
+      });
+    }
+    document.getElementById('leads-export').classList.toggle('hidden', registros.length===0);
+    atualizarTSV();
+  } catch(err){
+    console.error('Erro ao carregar leads:', err);
+    listEl.innerHTML = '<p class="hint left">Erro ao carregar.</p>';
+  }
+}
+document.getElementById('btn-atualizar-leads').addEventListener('click', carregarLeads);
+document.getElementById('btn-copiar-leads').addEventListener('click', ()=>{
+  const area = document.getElementById('tsv-area'); const btn = document.getElementById('btn-copiar-leads');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(area.value).then(()=>{
+      btn.textContent='Copiado!'; setTimeout(()=>{ btn.textContent='Copiar leads (cole direto no Sheets)'; }, 2000);
+    }).catch(()=>{});
+  }
+});
+document.getElementById('tsv-area').addEventListener('click', e=>e.target.select());
+
+// Carrega desconto salvo (se houver) e inicia
+(async ()=>{
+  try {
+    const r = await window.storage.get('config:desconto', true);
+    if(r && r.value!=null){ state.descontoPercent = Number(r.value)||0; }
+  } catch(e){ /* nenhum desconto salvo ainda */ }
+  render();
+})();
+</script>
+</body>
+</html>
