@@ -421,11 +421,12 @@ async function salvarLead(){
 
   if (SHEETS_WEBHOOK_URL) {
     try {
+      const params = new URLSearchParams();
+      Object.keys(registro).forEach(k => params.append(k, registro[k]));
       await fetch(SHEETS_WEBHOOK_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(registro),
+        body: params,
       });
     } catch(err){ console.error('Erro ao enviar pra planilha (normal se estiver vendo dentro do Claude):', err); }
   }
